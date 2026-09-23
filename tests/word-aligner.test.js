@@ -30,4 +30,18 @@ describe('Word Aligner Module', () => {
     const html = renderAlignedTranslationHTML(translation, alignments, 's_0');
     expect(html).toBe('정부는 논의를 계속한다.');
   });
+
+  it('should use fuzzy matching when target word has slight inflection difference in translation', () => {
+    const translation = '정부는 신중하게 검토했다.';
+    const alignments = [
+      {
+        wordId: 's_0_w_1',
+        srcWord: '検討',
+        targetKo: '검토하다'
+      }
+    ];
+
+    const html = renderAlignedTranslationHTML(translation, alignments, 's_0');
+    expect(html).toContain('<span class="trans-word-token" data-wid="s_0_w_1">검토</span>');
+  });
 });

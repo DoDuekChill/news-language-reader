@@ -54,4 +54,19 @@ describe('AI Client and Prompt Chaining', () => {
     expect(result.alignments[0].baseForm).toBe('検討する');
     expect(result.alignments[0].reading).toBe('けんとう');
   });
+
+  it('should report downloading status when capabilities return after-download', async () => {
+    global.window = {
+      ai: {
+        languageModel: {
+          capabilities: vi.fn().mockResolvedValue({ available: 'after-download' })
+        }
+      }
+    };
+
+    const client = new AIClient();
+    const status = await client.checkAvailability();
+    expect(status.status).toBe('downloading');
+    expect(status.message).toContain('다운로드');
+  });
 });

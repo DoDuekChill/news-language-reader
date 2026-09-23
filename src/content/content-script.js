@@ -10,13 +10,13 @@ import { StorageManager } from '../storage/storage-manager.js';
 
 let isMounted = false;
 let currentHost = null;
+let activeCleanupFns = [];
 
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.action === 'toggle-reader') {
       if (isMounted) {
-        currentHost?.unmount();
-        isMounted = false;
+        closeReader();
       } else {
         startReader();
       }
@@ -53,16 +53,39 @@ const READER_STYLES = `
   .sub-en-text { display: block; font-size: 13px; color: #6b7280; margin-top: 4px; }
 `;
 
+function closeReader() {
+  activeCleanupFns.forEach(fn => {
+    try { fn(); } catch (e) { console.warn('Cleanup error:', e); }
+  });
+  activeCleanupFns = [];
+  currentHost?.unmount();
+  currentHost = null;
+  isMounted = false;
+}
+
 export async function startReader() {
-  const article = extractArticle(document);
+  let article = extractArticle(document);
+
+  // Fallback: Check if user has selected text on screen
   if (!article || article.paragraphs.length === 0) {
-    alert('기사 본문을 감지하지 못했습니다.');
-    return;
+    const selectedText = window.getSelection()?.toString()?.trim();
+    if (selectedText && selectedText.length > 10) {
+      article = {
+        title: document.title || '선택 영역 학습',
+        byline: '사용자 선택 텍스트',
+        lang: document.documentElement?.lang?.split('-')[0] || 'ja',
+        paragraphs: [selectedText],
+        url: window.location.href
+      };
+    } else {
+      alert('기사 본문이 감지되지 않았습니다. 학습할 텍스트를 마우스로 드래그하여 선택한 후 다시 실행해 주세요.');
+      return;
+    }
   }
 
   isMounted = true;
   currentHost = createShadowHost();
-  const { shadowRoot, unmount } = currentHost;
+  const { shadowRoot } = currentHost;
 
   // Inject stylesheet inside Shadow DOM
   const styleEl = document.createElement('style');
@@ -97,18 +120,17 @@ export async function startReader() {
   };
 
   const handleClose = () => {
-    unmount();
-    isMounted = false;
+    closeReader();
   };
 
   // Keyboard shortcut: ESC to close
   const keyHandler = (e) => {
     if (e.key === 'Escape') {
-      handleClose();
-      document.removeEventListener('keydown', keyHandler);
+      closeReader();
     }
   };
   document.addEventListener('keydown', keyHandler);
+  activeCleanupFns.push(() => document.removeEventListener('keydown', keyHandler));
 
   function setupReader() {
     const ui = renderReaderOverlay({
@@ -225,9 +247,21 @@ export async function startReader() {
       }
     };
     setTimeout(() => document.addEventListener('click', closeHandler), 10);
+    activeCleanupFns.push(() => {
+      popover.remove();
+      document.removeEventListener('click', closeHandler);
+    });
   }
 
   async function processQueue(article, ui, alignmentsMap) {
+    const aiStatus = await aiClient.checkAvailability();
+    if (aiStatus.status === 'downloading') {
+      const firstRight = ui.colRight.querySelector('.sentence-block');
+      if (firstRight) {
+        firstRight.textContent = `${aiStatus.message}...`;
+      }
+    }
+
     let brief = '';
     try {
       brief = await aiClient.generateArticleBrief({
