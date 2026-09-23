@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "News Language Reader",
+  "version": "1.0.0",
+  "description": "Multi-language news reading assistant with word alignment and native nuances",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "unlimitedStorage"
+  ],
+  "action": {
+    "default_title": "Open News Language Reader"
+  },
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/content-script.js"]
+    }
+  ],
+  "commands": {
+    "toggle-reader": {
+      "suggested_key": {
+        "default": "Alt+L",
+        "mac": "Alt+L"
+      },
+      "description": "Toggle News Language Reader"
+    }
+  }
+}
