@@ -180,7 +180,7 @@ export async function startReader() {
             });
 
             span.addEventListener('click', () => {
-              showLexicalPopover(span, tok, s.sentenceId);
+              showLexicalPopover(span, tok, s.sentenceId, activeAlignmentsMap);
             });
 
             sBlock.appendChild(span);
@@ -239,21 +239,22 @@ export async function startReader() {
 
   setupReader();
 
-  function showLexicalPopover(targetSpan, token, sentenceId) {
+  function showLexicalPopover(targetSpan, token, sentenceId, activeAlignmentsMap) {
     if (activePopoverCleanup) {
       activePopoverCleanup();
       activePopoverCleanup = null;
     }
 
     const existing = session.words.find(w => w.surface === token.surface);
+    const align = activeAlignmentsMap ? activeAlignmentsMap.get(token.wordId) : null;
     const wordData = existing || {
       surface: token.surface,
-      reading: '',
-      baseForm: token.surface,
-      pos: '단어',
-      translationKo: '단어 분석',
-      translationEn: 'word',
-      nuance: '원어민 뉘앙스 분석',
+      reading: align?.reading || '',
+      baseForm: align?.baseForm || token.surface,
+      pos: align?.pos || '단어',
+      translationKo: align?.targetKo || '단어 분석',
+      translationEn: align?.targetEn || 'word',
+      nuance: align?.nuance || '원어민 뉘앙스 분석',
       isSaved: false
     };
 
@@ -357,7 +358,7 @@ export async function startReader() {
       } catch (err) {
         const rightBlock = ui.colRight.querySelector(`#right-${s.sentenceId}`);
         if (rightBlock) {
-          rightBlock.innerHTML = '<span style="color:#800020;">...</span>';
+          rightBlock.innerHTML = `<span style="color:#800020;">Chrome 내장 AI 준비 중 또는 다운로드 중...</span>`;
         }
       }
     }
