@@ -28,30 +28,34 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
 const READER_STYLES = `
   :host {
     all: initial;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    color: #1a1a1a;
-    background-color: #f8f9fa;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Arial", sans-serif;
+    color: #111111;
+    background-color: #f5f5f5;
     box-sizing: border-box;
   }
   *, *::before, *::after { box-sizing: inherit; }
   .reader-container { display: flex; flex-direction: column; width: 100vw; height: 100vh; background: #ffffff; }
-  .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; border-bottom: 1px solid #e5e7eb; background: #fafafa; }
-  .title-badge { font-size: 15px; font-weight: 600; max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .top-actions { display: flex; gap: 12px; align-items: center; }
-  .btn { padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: #ffffff; font-size: 13px; font-weight: 500; cursor: pointer; }
-  .btn-primary { background: #2563eb; color: #ffffff; border-color: #2563eb; }
-  .btn-primary:hover { background: #1d4ed8; }
+  .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 2px solid #e5e5e5; background: #ffffff; }
+  .title-badge { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; text-transform: uppercase; max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1e1e1e; }
+  .top-actions { display: flex; gap: 16px; align-items: center; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px; border: 1px solid #cccccc; border-radius: 4px; background: #ffffff; color: #111111; cursor: pointer; transition: all 0.2s ease; }
+  .btn:hover { background: #f5f5f5; border-color: #888888; }
+  .btn-primary { background: #111111; color: #ffffff; border-color: #111111; }
+  .btn-primary:hover { background: #800020; border-color: #800020; }
+  .btn svg { width: 18px; height: 18px; fill: currentColor; }
+  .icon-badge { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #555555; }
+  .icon-badge svg { width: 16px; height: 16px; fill: #888888; }
   .split-body { display: flex; flex: 1; overflow: hidden; }
-  .column { flex: 1; overflow-y: auto; padding: 32px 48px; line-height: 1.8; font-size: 17px; }
-  .column-left { border-right: 1px solid #e5e7eb; }
-  .column-right { background: #fbfbfb; }
-  .sentence-block { margin-bottom: 24px; padding: 8px 12px; border-radius: 6px; transition: background 0.15s ease; }
-  .sentence-block:hover { background: #f1f5f9; }
-  .word-token { cursor: pointer; border-radius: 3px; padding: 1px 2px; transition: background 0.15s ease; }
-  .word-token:hover, .word-token.highlight-synced { background-color: #fef08a; }
-  .trans-word-token { cursor: pointer; border-radius: 3px; padding: 1px 2px; font-weight: 600; }
-  .trans-word-token:hover, .trans-word-token.highlight-synced { background-color: #fef08a; }
-  .sub-en-text { display: block; font-size: 13px; color: #6b7280; margin-top: 4px; }
+  .column { flex: 1; overflow-y: auto; padding: 48px 64px; line-height: 1.6; font-size: 16px; }
+  .column-left { border-right: 2px solid #e5e5e5; }
+  .column-right { background: #f5f5f5; }
+  .sentence-block { margin-bottom: 32px; padding: 12px 16px; border-left: 3px solid transparent; transition: all 0.2s ease; }
+  .sentence-block:hover { border-left-color: #cccccc; background: #ffffff; }
+  .word-token { cursor: pointer; border-radius: 2px; padding: 2px 4px; transition: all 0.2s ease; }
+  .word-token:hover, .word-token.highlight-synced { background-color: #111111; color: #ffffff; }
+  .trans-word-token { cursor: pointer; border-radius: 2px; padding: 2px 4px; font-weight: 700; }
+  .trans-word-token:hover, .trans-word-token.highlight-synced { background-color: #111111; color: #ffffff; }
+  .sub-en-text { display: block; font-size: 12px; color: #888888; margin-top: 8px; font-weight: 500; letter-spacing: 0.02em; }
 `;
 
 function closeReader() {
@@ -191,7 +195,7 @@ export async function startReader() {
         const rightBlock = document.createElement('div');
         rightBlock.className = 'sentence-block';
         rightBlock.id = `right-${s.sentenceId}`;
-        rightBlock.textContent = '번역 분석 대기 중...';
+        rightBlock.innerHTML = '<span style="color:#888;">...</span>';
         ui.colRight.appendChild(rightBlock);
       });
     });
@@ -208,7 +212,7 @@ export async function startReader() {
             translationKo: '사용자 스크랩 문장',
             translationEn: ''
           });
-          ui.badgeCount.textContent = `수집: 단어 ${session.words.length}개 / 문장 ${session.sentences.length}개`;
+          ui.badgeCount.textContent = `${session.words.length} / ${session.sentences.length}`;
         }
       }
     });
@@ -260,7 +264,7 @@ export async function startReader() {
       } else {
         session.words = session.words.filter(w => w.surface !== wordData.surface);
       }
-      ui.badgeCount.textContent = `수집: 단어 ${session.words.length}개 / 문장 ${session.sentences.length}개`;
+      ui.badgeCount.textContent = `${session.words.length} / ${session.sentences.length}`;
     });
 
     shadowRoot.appendChild(popover);
@@ -353,7 +357,7 @@ export async function startReader() {
       } catch (err) {
         const rightBlock = ui.colRight.querySelector(`#right-${s.sentenceId}`);
         if (rightBlock) {
-          rightBlock.textContent = '번역 대기 중 (또는 AI 준비 중)';
+          rightBlock.innerHTML = '<span style="color:#800020;">...</span>';
         }
       }
     }
