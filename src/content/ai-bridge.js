@@ -11,13 +11,19 @@
   async function checkModelAvailability(lm) {
     if (!lm) return 'no';
     try {
+      const normalize = (value) => {
+        const raw = typeof value === 'string' ? value : (value?.available || '');
+        if (raw === 'readily' || raw === 'available') return 'readily';
+        if (raw === 'after-download' || raw === 'downloadable' || raw === 'downloading') return 'after-download';
+        return 'no';
+      };
       if (typeof lm.availability === 'function') {
         const res = await lm.availability();
-        return typeof res === 'string' ? res : (res?.available || 'readily');
+        return normalize(res);
       }
       if (typeof lm.capabilities === 'function') {
         const caps = await lm.capabilities();
-        return caps?.available || 'readily';
+        return normalize(caps?.available || 'readily');
       }
       return 'readily';
     } catch (e) {
@@ -49,7 +55,17 @@
           }
           mainSession = await lm.create();
         }
-        const result = await mainSession.prompt(payload.prompt);
+        let result = await mainSession.prompt(payload.prompt);
+        if (result && typeof result !== 'string') {
+          if (typeof result.text === 'string') result = result.text;
+          else if (typeof result[Symbol.asyncIterator] === 'function') {
+            let acc = '';
+            for await (const chunk of result) acc += typeof chunk === 'string' ? chunk : '';
+            result = acc;
+          } else {
+            result = String(result);
+          }
+        }
         window.postMessage({ source: 'ai-bridge-response', id, result }, '*');
       }
     } catch (err) {

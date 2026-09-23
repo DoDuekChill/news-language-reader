@@ -68,5 +68,39 @@ describe('AI Client and Prompt Chaining', () => {
     const status = await client.checkAvailability();
     expect(status.status).toBe('downloading');
     expect(status.message).toContain('다운로드');
+    delete global.window;
+  });
+
+  it('should treat the current availability() value available as ready', async () => {
+    global.window = {
+      ai: {
+        languageModel: {
+          availability: vi.fn().mockResolvedValue('available')
+        }
+      }
+    };
+
+    const client = new AIClient();
+    const status = await client.checkAvailability();
+    expect(status.status).toBe('ready');
+    delete global.window;
+  });
+
+  it('should ask the extension service worker before the page', async () => {
+    global.chrome = {
+      runtime: {
+        id: 'test-extension',
+        sendMessage: vi.fn().mockResolvedValue({ ok: true, result: 'readily' })
+      }
+    };
+    global.window = {};
+
+    const client = new AIClient();
+    const status = await client.checkAvailability();
+    expect(status.status).toBe('ready');
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ action: 'ai', op: 'check' });
+
+    delete global.chrome;
+    delete global.window;
   });
 });

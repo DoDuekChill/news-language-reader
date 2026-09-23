@@ -286,6 +286,25 @@ export async function startReader() {
     };
   }
 
+  function formatTranslationError(err) {
+    const msg = err?.message || '오류 발생';
+    if (/download|after-download|downloading/i.test(msg)) {
+      return `Chrome 내장 AI 모델 다운로드 중... (${msg})`;
+    }
+    if (/Timeout waiting/i.test(msg)) {
+      return `Chrome 내장 AI 응답 시간 초과. chrome://on-device-internals에서 모델 다운로드 상태를 확인하세요. (${msg})`;
+    }
+    if (/not available|unavailable|not supported|찾을 수 없|Prompt API|LanguageModel/i.test(msg)) {
+      return `Chrome 내장 AI를 사용할 수 없습니다. chrome://flags의 Prompt API for Gemini Nano와 chrome://on-device-internals를 확인하세요. (${msg})`;
+    }
+    return `번역에 실패했습니다. (${msg})`;
+  }
+
+  function isModelUnavailable(err) {
+    const msg = err?.message || '';
+    return /not available|unavailable|not supported|찾을 수 없|Prompt API|LanguageModel is not available|Timeout waiting/i.test(msg);
+  }
+
   async function processQueue(article, ui, alignmentsMap) {
     const aiStatus = await aiClient.checkAvailability();
     if (aiStatus.status === 'downloading') {
@@ -359,8 +378,9 @@ export async function startReader() {
         console.error('[NewsLanguageReader] Translation failed for sentence:', s.sentenceId, err);
         const rightBlock = ui.colRight.querySelector(`#right-${s.sentenceId}`);
         if (rightBlock) {
-          rightBlock.innerHTML = `<span style="color:#800020; font-size:12px;">Chrome 내장 AI 준비 중 또는 다운로드 중... (${err.message || '오류 발생'})</span>`;
+          rightBlock.innerHTML = `<span style="color:#800020; font-size:12px;">${formatTranslationError(err)}</span>`;
         }
+        if (isModelUnavailable(err)) break;
       }
     }
   }
