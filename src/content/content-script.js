@@ -356,9 +356,10 @@ export async function startReader() {
 
         prevContext = `${s.text} -> ${res.translationKo}`;
       } catch (err) {
+        console.error('[NewsLanguageReader] Translation failed for sentence:', s.sentenceId, err);
         const rightBlock = ui.colRight.querySelector(`#right-${s.sentenceId}`);
         if (rightBlock) {
-          rightBlock.innerHTML = `<span style="color:#800020;">Chrome 내장 AI 준비 중 또는 다운로드 중...</span>`;
+          rightBlock.innerHTML = `<span style="color:#800020; font-size:12px;">Chrome 내장 AI 준비 중 또는 다운로드 중... (${err.message || '오류 발생'})</span>`;
         }
       }
     }
