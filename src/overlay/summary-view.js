@@ -91,9 +91,19 @@ export function createSummaryElement(session, onBack, doc = document) {
   });
 
   container.querySelector('#btn-back-reader')?.addEventListener('click', onBack);
-  container.querySelector('#btn-copy-md')?.addEventListener('click', () => {
+  container.querySelector('#btn-copy-md')?.addEventListener('click', async () => {
     const md = exportToMarkdown(session);
-    navigator.clipboard?.writeText(md);
+    try {
+      await navigator.clipboard?.writeText(md);
+      const btn = container.querySelector('#btn-copy-md');
+      if (btn) {
+        const origHTML = btn.innerHTML;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#800020;"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>`;
+        setTimeout(() => { btn.innerHTML = origHTML; }, 1500);
+      }
+    } catch (e) {
+      console.warn('Clipboard copy error:', e);
+    }
   });
   container.querySelector('#btn-download-csv')?.addEventListener('click', () => {
     const csv = exportToCSV(session);

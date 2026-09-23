@@ -56,8 +56,15 @@ export function createPopoverElement(wordData, onSaveToggle, doc = document) {
 
 export function positionPopover(popover, targetEl) {
   const rect = targetEl.getBoundingClientRect();
-  const top = rect.bottom + window.scrollY + 8;
-  const left = Math.max(16, Math.min(window.innerWidth - 300, rect.left + window.scrollX));
+  const popoverHeight = 220;
+  let top = rect.bottom + 8;
+
+  // If opening downwards clips bottom of screen, flip above
+  if (top + popoverHeight > window.innerHeight && rect.top > popoverHeight + 16) {
+    top = rect.top - popoverHeight - 8;
+  }
+
+  const left = Math.max(16, Math.min(window.innerWidth - 300, rect.left));
 
   popover.style.top = `${top}px`;
   popover.style.left = `${left}px`;
