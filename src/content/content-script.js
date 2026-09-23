@@ -11,6 +11,7 @@ import { StorageManager } from '../storage/storage-manager.js';
 let isMounted = false;
 let currentHost = null;
 let activeCleanupFns = [];
+let activePopoverCleanup = null;
 
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((msg) => {
@@ -54,6 +55,10 @@ const READER_STYLES = `
 `;
 
 function closeReader() {
+  if (activePopoverCleanup) {
+    try { activePopoverCleanup(); } catch (e) { console.warn('Popover cleanup error:', e); }
+    activePopoverCleanup = null;
+  }
   activeCleanupFns.forEach(fn => {
     try { fn(); } catch (e) { console.warn('Cleanup error:', e); }
   });
@@ -208,6 +213,22 @@ export async function startReader() {
       }
     });
 
+    // Scroll Synchronization (Left -> Right)
+    let isSyncingScroll = false;
+    const handleScrollSync = () => {
+      if (isSyncingScroll) return;
+      isSyncingScroll = true;
+      const maxLeft = ui.colLeft.scrollHeight - ui.colLeft.clientHeight;
+      const maxRight = ui.colRight.scrollHeight - ui.colRight.clientHeight;
+      if (maxLeft > 0 && maxRight > 0) {
+        const ratio = ui.colLeft.scrollTop / maxLeft;
+        ui.colRight.scrollTop = ratio * maxRight;
+      }
+      requestAnimationFrame(() => { isSyncingScroll = false; });
+    };
+    ui.colLeft.addEventListener('scroll', handleScrollSync);
+    activeCleanupFns.push(() => ui.colLeft.removeEventListener('scroll', handleScrollSync));
+
     // Start background translation queue
     processQueue(article, ui, activeAlignmentsMap);
   }
@@ -215,6 +236,11 @@ export async function startReader() {
   setupReader();
 
   function showLexicalPopover(targetSpan, token, sentenceId) {
+    if (activePopoverCleanup) {
+      activePopoverCleanup();
+      activePopoverCleanup = null;
+    }
+
     const existing = session.words.find(w => w.surface === token.surface);
     const wordData = existing || {
       surface: token.surface,
@@ -242,15 +268,17 @@ export async function startReader() {
 
     const closeHandler = (e) => {
       if (!popover.contains(e.target) && e.target !== targetSpan) {
-        popover.remove();
-        document.removeEventListener('click', closeHandler);
+        if (activePopoverCleanup) {
+          activePopoverCleanup();
+          activePopoverCleanup = null;
+        }
       }
     };
     setTimeout(() => document.addEventListener('click', closeHandler), 10);
-    activeCleanupFns.push(() => {
+    activePopoverCleanup = () => {
       popover.remove();
       document.removeEventListener('click', closeHandler);
-    });
+    };
   }
 
   async function processQueue(article, ui, alignmentsMap) {

@@ -18,6 +18,7 @@ describe('Manifest V3 Configuration', () => {
     expect(manifest.permissions).toContain('activeTab');
     expect(manifest.permissions).toContain('unlimitedStorage');
     expect(manifest.background.service_worker).toBe('src/background/service-worker.js');
+    expect(manifest.content_scripts[0].js).toContain('dist/content-script.bundle.js');
     expect(manifest.action.default_title).toBe('Open News Language Reader');
   });
 });
